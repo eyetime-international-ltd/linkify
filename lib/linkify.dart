@@ -49,8 +49,8 @@ class EmailElement extends LinkableElement {
 
   bool equals(other) =>
       other is EmailElement &&
-      super.equals(other) &&
-      other.emailAddress == emailAddress;
+          super.equals(other) &&
+          other.emailAddress == emailAddress;
 }
 
 /// Represents an element containing text
@@ -74,6 +74,11 @@ final _linkifyUrlRegex = RegExp(
   caseSensitive: false,
 );
 
+final _linkifyShortUrlRegex = RegExp(
+  r"^((?:.|\n)*?)((?:www?)[^\s/$.?#].[^\s]*)",
+  caseSensitive: false,
+);
+
 final _linkifyEmailRegex = RegExp(
   r"^((?:.|\n)*?)((mailto:)?[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4})",
   caseSensitive: false,
@@ -87,10 +92,10 @@ final _linkifyEmailRegex = RegExp(
 /// Uses [linkTypes] to enable some types of links (URL, email).
 /// Will default to all (if `null`).
 List<LinkifyElement> linkify(
-  String text, {
-  bool humanize,
-  List<LinkType> linkTypes,
-}) {
+    String text, {
+      bool humanize,
+      List<LinkType> linkTypes,
+    }) {
   final list = List<LinkifyElement>();
 
   if (text == null || text.isEmpty) {
@@ -108,11 +113,14 @@ List<LinkifyElement> linkify(
   final urlMatch = linkTypes.contains(LinkType.url)
       ? _linkifyUrlRegex.firstMatch(text)
       : null;
+  final shortUrlMatch = linkTypes.contains(LinkType.url)
+      ? _linkifyShortUrlRegex.firstMatch(text)
+      : null;
   final emailMatch = linkTypes.contains(LinkType.email)
       ? _linkifyEmailRegex.firstMatch(text)
       : null;
 
-  if (urlMatch == null && emailMatch == null) {
+  if (urlMatch == null && shortUrlMatch == null && emailMatch == null) {
     list.add(TextElement(text));
   } else {
     if (urlMatch != null) {
@@ -132,6 +140,17 @@ List<LinkifyElement> linkify(
           list.add(LinkElement(urlMatch.group(2)));
         }
       }
+    } else if (shortUrlMatch != null){
+      text = text.replaceFirst(shortUrlMatch.group(0), "");
+
+      if (shortUrlMatch.group(1).isNotEmpty){
+        list.add(TextElement(shortUrlMatch.group(1)));
+      }
+
+      if (shortUrlMatch.group(2).isNotEmpty){
+        list.add(LinkElement("https://" + shortUrlMatch.group(2)));
+      }
+
     } else if (emailMatch != null) {
       text = text.replaceFirst(emailMatch.group(0), "");
 
